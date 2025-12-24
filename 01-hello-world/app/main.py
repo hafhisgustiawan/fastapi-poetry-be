@@ -1,7 +1,7 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Depends
 from typing import Optional, List
 
-from app.schemas import RecipeCreate, RecipeSearchResults, Recipe
+from app.schemas import RecipeCreate, RecipeSearchResults, Recipe, GetRecipeRequest
 
 app = FastAPI(title="Recipe API", openapi_url="/openapi.json")
 
@@ -82,21 +82,30 @@ def getRecipe(*, id_recipe: int):
 # status_code ini adalah optional params, gaboleh langsung misal:
 # @api_router.get('/search', 200)
 # bakal dapet error ini -> TypeError: APIRouter.get() takes 2 positional arguments but 3 were given
-@api_router.get('/search', status_code=200, response_model=RecipeSearchResults)
 # parameter tanpa default (request) tidak boleh setelah yang punya default
+
+# note::
+# jadi untuk parameter di python ini gausah di pusingin urutannya, apalagi yang udah ada key nya (e.g get_data(Name=Optional[str]=None)) jadi anggap aja ini object dan manggilnya pun pake key ya gini (e.g get_data(Name="Hafhis"))
+# 
+# Untuk kasus di bawah ini juga sama, gak ada aturan pakem yang harus dipikirin. Jadi sebelumnya itu pake (keyword: Optional[str] = None, max_result: Optional[int] = None) juga bisa
+# 
+# Nah karena mau pake pydantic, kita bisa set. Yang ngebedain antara request body dan query params ya cuma ada Depends() nya ajah
+# 
+
+@api_router.get('/search', status_code=200, response_model=RecipeSearchResults)
 def searchRecipe(
-    keyword: Optional[str] = None, max_result: Optional[int] = None
+    request: GetRecipeRequest = Depends()
 ):
     
     # if dengan negasi
-    if not keyword and max_result:
+    if not request.keyword and request.max_result:
         # list slicing, googling pak
-        return {"results": RECIPES[:max_result]}
+        return {"results": RECIPES[:request.max_result]}
     
-    results = filter(lambda recipe: keyword.lower() in recipe["label"].lower(), RECIPES)
-    return {"results": list(results)[:max_result]}
+    results = filter(lambda recipe: request.keyword.lower() in recipe["label"].lower(), RECIPES)
+    return {"results": list(results)[:request.max_result]}
 
-# kita akan add recipe
+# nah disini request body mau di tarok di urutan manapun gapapa, aneh bet dah
 @api_router.post('/add-recipe', status_code=201)
 def createRecipe(*, payload: RecipeCreate):
 

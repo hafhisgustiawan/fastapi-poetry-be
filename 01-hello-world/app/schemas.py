@@ -32,3 +32,7 @@ class RecipeCreate(BaseModel):
     source: str
     url: HttpUrl
     submitter_id: int
+    
+class GetRecipeRequest(BaseModel):
+    keyword: Optional[str] = None
+    max_result: Optional[int] = None
