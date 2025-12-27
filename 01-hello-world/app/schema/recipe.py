@@ -36,3 +36,4 @@ class RecipeCreate(BaseModel):
 class GetRecipeRequest(BaseModel):
     keyword: Optional[str] = None
     max_result: Optional[int] = None
+
