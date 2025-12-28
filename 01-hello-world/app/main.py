@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
-from typing import Optional, List
+from typing import Optional, List, Annotated
+
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -86,25 +87,28 @@ def getRecipe(*, id_recipe: int):
     
     return mappedResult[0] if len(mappedResult) > 0 else {}
 
-# note: deps injection
-# kali ini kita akan implement search dari sebuah object
-# status_code ini adalah optional params, gaboleh langsung misal:
-# @api_router.get('/search', 200)
-# bakal dapet error ini -> TypeError: APIRouter.get() takes 2 positional arguments but 3 were given
-# parameter tanpa default (request) tidak boleh setelah yang punya default
+"""
+- kali ini kita akan implement search dari sebuah object
 
-# note: query parameter
-# jadi untuk parameter di python ini gausah di pusingin urutannya, apalagi yang udah ada key nya (e.g get_data(Name=Optional[str]=None)) jadi anggap aja ini object dan manggilnya pun pake key ya gini (e.g get_data(Name="Hafhis"))
-# 
-# Untuk kasus di bawah ini juga sama, gak ada aturan pakem yang harus dipikirin. Jadi sebelumnya itu pake (keyword: Optional[str] = None, max_result: Optional[int] = None) juga bisa
-# 
-# Nah karena mau pake pydantic, kita bisa set. Yang ngebedain antara request body dan query params ya cuma ada Depends() nya ajah
-# 
-# When you declare other function parameters that are not part of the path parameters, they are automatically interpreted as "query" parameters.
+- status_code ini adalah optional params (key value pairs)@api_router.get('/search', 200) => bakal error TypeError: APIRouter.get() takes 2 positional arguments but 3 were given
+
+- parameter tanpa default value (name='hafhis') tidak boleh setelah yang punya default. Trick nya pake param * aja diawal biar bisa
+
+note: query parameter
+- jadi untuk parameter di python ini gausah di pusingin urutannya, apalagi yang udah ada key nya (e.g get_data(Name=Optional[str]=None)) jadi anggap aja ini object dan manggilnya pun pake key value pairs (e.g get_data(Name="Hafhis"))
+
+- Untuk kasus di bawah ini juga sama, baca dokumentasi biar lebih jelas. Jadi sebelumnya itu pake (keyword: Optional[str] = None, max_result: Optional[int] = None) dan works
+
+- Misal seperti dibawah ini, ada sebuah route yang menerima query params dan request body sekalian dan mau pake pydantic.
+- Bisa pake Annotated[<pydantic-model>, Depends()] => untuk query params
+- Untuk body langsung aja type hints nya pake pydantic model, itu auto di detect sebagai body
+
+- When you declare other function parameters that are not part of the path parameters, they are automatically interpreted as "query" parameters.
+"""
 
 @api_router.get('/search', status_code=200, response_model=RecipeSearchResults)
 def searchRecipe(
-    request: GetRecipeRequest = Depends()
+    request: Annotated[GetRecipeRequest, Depends()]
 ):
     if not request.keyword and request.max_result:
         # list slicing, googling pak
@@ -116,12 +120,10 @@ def searchRecipe(
 # setelah param * itu semua param selanjutnya harus pake key value pairs
 @api_router.post('/add-recipe', status_code=201)
 def createRecipe(*, payload: RecipeCreate):
-
     return [*payload]
 
 @api_router.get('/foods/{total}', response_model=GetFoodResponse)
 def getAllFood(*, total: int):
-    
     try:
         now = datetime.now()
 
